@@ -7,7 +7,7 @@ This guideline is written with machine with these specs:
 - CPU: 4 vCPU
 - RAM: 16 GB
 - SSD: 100 GB
-- OS: Ubuntu 22.04
+- OS: Ubuntu 22.04 Server (minimal setup)
 - Logged in account has `sudo` privilege
 
 The VM should be in clean state to avoid conflict with any other packages.
