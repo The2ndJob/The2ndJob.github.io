@@ -90,40 +90,66 @@ Watch pod creation status, all your pod should be `Running`, except conf-bench s
 kubectl -n ${YOUR_NAMESPACE:-erpnext}  get pod -w
 ```
 
-### Initialize new site
+### Deploy new site
 
 When all core services are running, it's time to create sites and their ingress (for access)
 
-#### Deploy site creation job
-
-`<TBU>`
-
-#### Deploy new site ingress
-
-`<TBU>`
+Prepare values for creating new site, named it `create-new-site.yaml`
 
 ```yaml
-# Ingress
+persistence:
+  worker:
+    storageClass: microk8s-hostpath
+
+# Site creation job
+jobs:
+  createSite:
+    enabled: true
+    siteName: "erpnext-demo1.getto.dev"
+    adminPassword: "YourSuperScretPassword"
+
+# New site ingress
 ingress:
   enabled: true
+  ingressName: "erpnext-demo1"
   annotations:
-    # get available classes on your cluster by command
-    # kubectl get ingressClass
+    #cert-manager.io/cluster-issuer: letsencrypt
     kubernetes.io/ingress.class: public
-    # kubernetes.io/tls-acme: "true"
-    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    #kubernetes.io/tls-acme: "true"
   hosts:
   - host: erpnext-demo1.getto.dev
     paths:
     - path: /
       pathType: ImplementationSpecific
   tls: []
-  #  - secretName: auth-server-tls
+  ## If you want to serve your site over HTTPS
+  #  - secretName: erpnext-demo1-tls
   #    hosts:
-  #      - auth-server.local
+  #      - erpnext-demo1.getto.dev
 ```
 
+Generate the needed template for the job
+
 ```bash
+helm template ${YOUR_APP_NAME:-erp1} -n ${YOUR_NAMESPACE:-erpnext} \
+  frappe/erpnext --version ${ERPNEXT_VERSION:-7.0.53} \
+  -f create-new-site.yaml -s templates/job-create-site.yaml > to-apply.yaml
+```
+
+Review the output file `to-apply.yaml` if you need to adjust anything before applying
+
+```bash
+kubectl apply -n ${YOUR_NAMESPACE:-erpnext} -f to-apply.yaml
+
+# Watch the creation job complete by
+kubectl -n ${YOUR_NAMESPACE:-erpnext}  get pod -w
+
+# Check the logs of the job if error happen
+# - Find your new-site job by: kubectl -n ${YOUR_NAMESPACE:-erpnext} get job
+kubectl -n ${YOUR_NAMESPACE:-erpnext} logs -f job/${JOB_NAME:-erp1-erpnext-new-site-20240404050628}
+
 # Check that you have ingress created
 kubectl -n ${YOUR_NAMESPACE:-erpnext} get ing
 ```
+
+Your site should be accessible via the configured domain. To add more site (with other domain), just repeat this step.
