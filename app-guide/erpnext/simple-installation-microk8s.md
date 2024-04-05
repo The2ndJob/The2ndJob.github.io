@@ -30,7 +30,7 @@ For easier usage, you should alias microk8s's commands
 
 ```bash
 sudo snap alias microk8s.kubectl kubectl
-sudo snap alias microk8s.helm helm
+sudo snap alias microk8s.helm3 helm
 ```
 
 ## Install ErpNext
@@ -113,8 +113,10 @@ ingress:
   enabled: true
   ingressName: "erpnext-demo1"
   annotations:
-    #cert-manager.io/cluster-issuer: letsencrypt
+    # Get your cluster ingress class by: kubectl get ingressClass
     kubernetes.io/ingress.class: public
+    ## This is for auto request LetsEncrypt certificate if you have a configured certmanager
+    #cert-manager.io/cluster-issuer: letsencrypt
     #kubernetes.io/tls-acme: "true"
   hosts:
   - host: erpnext-demo1.getto.dev
@@ -133,22 +135,34 @@ Generate the needed template for the job
 ```bash
 helm template ${YOUR_APP_NAME:-erp1} -n ${YOUR_NAMESPACE:-erpnext} \
   frappe/erpnext --version ${ERPNEXT_VERSION:-7.0.53} \
-  -f create-new-site.yaml -s templates/job-create-site.yaml > to-apply.yaml
+  -s templates/job-create-site.yaml -s templates/ingress.yaml \
+  -f create-new-site.yaml > to-apply.yaml
 ```
 
 Review the output file `to-apply.yaml` if you need to adjust anything before applying
 
 ```bash
 kubectl apply -n ${YOUR_NAMESPACE:-erpnext} -f to-apply.yaml
+```
 
-# Watch the creation job complete by
+Watch the creation job complete by
+
+```bash
 kubectl -n ${YOUR_NAMESPACE:-erpnext}  get pod -w
+```
 
-# Check the logs of the job if error happen
-# - Find your new-site job by: kubectl -n ${YOUR_NAMESPACE:-erpnext} get job
-kubectl -n ${YOUR_NAMESPACE:-erpnext} logs -f job/${JOB_NAME:-erp1-erpnext-new-site-20240404050628}
+Check the logs of the job if error happen
+```bash
+# Find your new-site job by: 
+kubectl -n ${YOUR_NAMESPACE:-erpnext} get job
 
-# Check that you have ingress created
+# Then set the JOB_NAME and see its log
+kubectl -n ${YOUR_NAMESPACE:-erpnext} logs job/${JOB_NAME:-erp1-erpnext-new-site-20240404050628}
+```
+
+Check that you have ingress created
+
+```bash
 kubectl -n ${YOUR_NAMESPACE:-erpnext} get ing
 ```
 
